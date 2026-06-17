@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Solar Monitor</title>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 15px;
+            max-width: 900px;
+            margin: auto;
+            background: #f4f4f4;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        @media (min-width: 650px) {
+            .grid-container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .card-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .peak {
+            color: #d32f2f;
+            font-size: 0.85em;
+        }
+
+        .offline-banner {
+            display: none;
+            background: #c62828;
+            color: white;
+            text-align: center;
+            padding: 6px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Solar Monitor Dashboard</h1>
+
+<div class="grid-container">
+
+    <div class="card" id="card-s1">
+        <div class="card-title">
+            <span>Solar 1</span>
+        </div>
+        
+        <div id="s1-conn-error" class="offline-banner">
+            Connection Lost. Reconnecting...
+        </div>
+
+        <p>Time: <span id="s1-val-time">Loading...</span></p>
+
+        <p>Battery: <b><span id="s1-val-bat-pct">0%</span></b></p>
+
+        <div style="background:#e0e0e0; border-radius:4px; height:14px; width:100%; margin-bottom:15px; overflow:hidden;">
+            <div id="s1-val-bat-bar" style="background:#2e7d32; height:100%; width:0%; transition:width 0.3s;"></div>
+        </div>
+
+        <p>
+            Voltage: <b><span id="s1-val-v">0.00</span> V</b>
+            <span class="peak">(Peak: <span id="s1-val-peak-v">0.00</span> @ <span id="s1-val-peak-v-time">N/A</span>)</span>
+        </p>
+
+        <p>
+            Current: <b><span id="s1-val-c">0.00</span> A</b>
+            <span class="peak">(Peak: <span id="s1-val-peak-c">0.00</span> @ <span id="s1-val-peak-c-time">N/A</span>)</span>
+        </p>
+
+        <p>
+            Power: <b><span id="s1-val-p">0.00</span> W</b>
+        </p>
+
+        <p>
+            Energy: <b><span id="s1-val-wh">0.000</span> Wh</b>
+        </p>
+
+        <p>
+            Relay 1: <b><span id="s1-val-relay-status">-</span></b> |
+            Relay 2: <b><span id="s1-val-relay2-status">-</span></b>
+        </p>
+    </div>
+
+    <div class="card" id="card-s2">
+        <div class="card-title">
+            <span>Solar 2</span>
+        </div>
+        
+        <div id="s2-conn-error" class="offline-banner">
+            Connection Lost. Reconnecting...
+        </div>
+
+        <p>Time: <span id="s2-val-time">Loading...</span></p>
+
+        <p>Battery: <b><span id="s2-val-bat-pct">0%</span></b></p>
+
+        <div style="background:#e0e0e0; border-radius:4px; height:14px; width:100%; margin-bottom:15px; overflow:hidden;">
+            <div id="s2-val-bat-bar" style="background:#2e7d32; height:100%; width:0%; transition:width 0.3s;"></div>
+        </div>
+
+        <p>
+            Voltage: <b><span id="s2-val-v">0.00</span> V</b>
+            <span class="peak">(Peak: <span id="s2-val-peak-v">0.00</span> @ <span id="s2-val-peak-v-time">N/A</span>)</span>
+        </p>
+
+        <p>
+            Current: <b><span id="s2-val-c">0.00</span> A</b>
+            <span class="peak">(Peak: <span id="s2-val-peak-c">0.00</span> @ <span id="s2-val-peak-c-time">N/A</span>)</span>
+        </p>
+
+        <p>
+            Power: <b><span id="s2-val-p">0.00</span> W</b>
+        </p>
+
+        <p>
+            Energy: <b><span id="s2-val-wh">0.000</span> Wh</b>
+        </p>
+
+        <p>
+            Relay 1: <b><span id="s2-val-relay-status">-</span></b>
+        </p>
+    </div>
+
+</div>
+
+<script>
+    const systems = [
+        { id: 's1', url: '/api/data' },
+        { id: 's2', url: '/api2/' }
+    ];
+
+    function updateSystemData(sys) {
+        const errBanner = document.getElementById(`${sys.id}-conn-error`);
+
+        fetch(sys.url)
+            .then(r => {
+                if (!r.ok) throw new Error();
+                return r.json();
+            })
+            .then(data => {
+                errBanner.style.display = 'none';
+
+                document.getElementById(`${sys.id}-val-time`).innerText = data.timestamp;
+
+                document.getElementById(`${sys.id}-val-bat-pct`).innerText =
+                    data.battery_pct.toFixed(0) + (data.is_charging === 1 ? '% ⚡' : '%');
+
+                const bar = document.getElementById(`${sys.id}-val-bat-bar`);
+                bar.style.width = data.battery_pct.toFixed(0) + '%';
+
+                let color = '#2e7d32';
+                if (data.is_charging === 1) color = '#0288d1';
+                else if (data.battery_pct < 25) color = '#c62828';
+                else if (data.battery_pct < 60) color = '#ef6c00';
+
+                bar.style.backgroundColor = color;
+
+                document.getElementById(`${sys.id}-val-v`).innerText = data.voltage.toFixed(2);
+                document.getElementById(`${sys.id}-val-peak-v`).innerText = data.peak_v.toFixed(2);
+                document.getElementById(`${sys.id}-val-peak-v-time`).innerText = data.peak_v_time;
+
+                document.getElementById(`${sys.id}-val-c`).innerText =
+                    (data.current_ma / 1000).toFixed(2);
+
+                document.getElementById(`${sys.id}-val-peak-c`).innerText =
+                    (data.peak_c_ma / 1000).toFixed(2);
+
+                document.getElementById(`${sys.id}-val-peak-c-time`).innerText =
+                    data.peak_c_time;
+
+                document.getElementById(`${sys.id}-val-p`).innerText =
+                    (data.power_mw / 1000).toFixed(2);
+
+                document.getElementById(`${sys.id}-val-wh`).innerText =
+                    data.energy_wh.toFixed(3);
+
+                document.getElementById(`${sys.id}-val-relay-status`).innerText =
+                    data.relay === 1 ? 'ACTIVE' : 'INACTIVE';
+
+                const relay2El = document.getElementById(`${sys.id}-val-relay2-status`);
+                if (relay2El) {
+                    relay2El.innerText = data.relay2 === 1 ? 'ACTIVE' : 'INACTIVE';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                errBanner.style.display = 'block';
+            });
+    }
+
+    function updateAll() {
+        systems.forEach(sys => updateSystemData(sys));
+    }
+
+    setInterval(updateAll, 2000);
+    updateAll();
+</script>
+
+</body>
+</html>
