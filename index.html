@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Solar Control</title>
+    <style>
+        body { font-family: sans-serif; padding: 15px; max-width: 450px; margin: auto; background: #f4f4f4; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        button { width: 100%; padding: 12px; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 5px; }
+        .btn-off { background: #c62828; }
+        .btn-on { background: #2e7d32; }
+        .peak { color: #d32f2f; font-size: 0.85em; }
+        .log-box { background: #212121; color: #00e676; padding: 10px; font-family: monospace; font-size: 11px; height: 150px; overflow-y: auto; border-radius: 4px; }
+        input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .hidden { display: none; }
+        .status-msg { padding: 10px; background: #e8f5e9; color: #2e7d32; border-radius: 4px; margin-bottom: 10px; display: none; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="main-view">
+        <h1>Solar System</h1>
+        <div class="card">
+            <p>Time: <span id="val-time">Loading...</span></p>
+            <p>Battery Capacity: <b><span id="val-bat-pct">0%</span></b></p>
+            <div style="background:#e0e0e0; border-radius:4px; height:14px; width:100%; margin-bottom:15px; overflow:hidden;">
+                <div id="val-bat-bar" style="background:#2e7d32; height:100%; width:0%; transition:width 0.3s;"></div>
+            </div>
+            <p>Voltage: <b><span id="val-v">0.00</span> V</b> <span class="peak">(Peak: <span id="val-peak-v">0.00</span> @ <span id="val-peak-v-time">N/A</span>)</span></p>
+            <p>Current: <b><span id="val-c">0.00</span> A</b> <span class="peak">(Peak: <span id="val-peak-c">0.00</span> @ <span id="val-peak-c-time">N/A</span>)</span></p>
+            <p>Power: <b><span id="val-p">0.00</span> W</b> <span class="peak">(Peak: <span id="val-peak-p">0.00</span>)</span></p>
+            <p>Energy: <b><span id="val-wh">0.000</span> Wh</b></p>
+            <p>Relay 1 Status: <span id="val-relay-status" style="font-weight:bold;">UNKNOWN</span></p>
+            <p>Relay 1 On-Time: <b><span id="val-relay-time">0h 0m</span></b></p>
+            <p>Relay 2 Status: <span id="val-relay2-status" style="font-weight:bold;">UNKNOWN</span></p>
+            <p>Relay 2 On-Time: <b><span id="val-relay2-time">0h 0m</span></b></p>
+        </div>
+
+        <h2>Relay 1 Control</h2>
+        <div class="card">
+            <button class="btn-on" onclick="toggleRelay(1, 1)">FORCE ON</button>
+            <button class="btn-off" onclick="toggleRelay(1, 0)">FORCE OFF</button>
+        </div>
+
+        <h2>Relay 2 Control</h2>
+        <div class="card">
+            <button class="btn-on" onclick="toggleRelay(2, 1)">FORCE ON</button>
+            <button class="btn-off" onclick="toggleRelay(2, 0)">FORCE OFF</button>
+        </div>
+
+        <h2>History</h2>
+        <div id="lb" class="log-box"></div>
+        <p style="text-align:center"><a href="#" onclick="toggleView()">Config</a></p>
+    </div>
+
+    <div id="config-view" class="hidden">
+        <h1>Configuration</h1>
+        <div class="card">
+            <div id="status-toast" class="status-msg"></div>
+            <form id="config-form">
+                <h3>Relay 1 Configuration</h3>
+                Low Cutoff (V): <input type="number" step="0.1" name="v_low" id="form-v-low">
+                High Threshold (V): <input type="number" step="0.1" name="v_high" id="form-v-high">
+                ON Current (mA): <input type="number" step="1" name="c_high" id="form-c-high">
+                <h3>Relay 2 Configuration</h3>
+                Low Cutoff (V): <input type="number" step="0.1" name="v_low_2" id="form-v-low2">
+                High Threshold (V): <input type="number" step="0.1" name="v_high_2" id="form-v-high2">
+                <button type="submit" style="background:#1976d2;">Save Changes</button>
+            </form>
+        </div>
+        <p style="text-align:center"><a href="#" onclick="toggleView()">Back Home</a></p>
+    </div>
+
+    <script>
+        const API_BASE = 'http://' + window.location.hostname + ':8081';
+        let configLoaded = false;
+
+        function toggleView() {
+            document.getElementById('main-view').classList.toggle('hidden');
+            document.getElementById('config-view').classList.toggle('hidden');
+        }
+
+        function showStatus(msg) {
+            const toast = document.getElementById('status-toast');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        function toggleRelay(relay, state) {
+            fetch(`${API_BASE}/toggle?relay=${relay}&state=${state}`)
+                .then(r => r.json())
+                .then(() => updateData())
+                .catch(e => console.error(e));
+        }
+
+        function updateData() {
+            fetch(`${API_BASE}/api/data`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('val-time').innerText = data.timestamp;
+                    document.getElementById('val-bat-pct').innerText = data.battery_pct.toFixed(0) + (data.is_charging === 1 ? '% ⚡' : '%');
+                    
+                    const bar = document.getElementById('val-bat-bar');
+                    bar.style.width = data.battery_pct.toFixed(0) + '%';
+                    let color = '#2e7d32';
+                    if (data.is_charging === 1) color = '#0288d1';
+                    else if (data.battery_pct < 25.0) color = '#c62828';
+                    else if (data.battery_pct < 60.0) color = '#ef6c00';
+                    bar.style.backgroundColor = color;
+
+                    document.getElementById('val-v').innerText = data.voltage.toFixed(2);
+                    document.getElementById('val-peak-v').innerText = data.peak_v.toFixed(2);
+                    document.getElementById('val-peak-v-time').innerText = data.peak_v_time;
+                    document.getElementById('val-c').innerText = (data.current_ma / 1000.0).toFixed(2);
+                    document.getElementById('val-peak-c').innerText = (data.peak_c_ma / 1000.0).toFixed(2);
+                    document.getElementById('val-peak-c-time').innerText = data.peak_c_time;
+                    document.getElementById('val-p').innerText = (data.power_mw / 1000.0).toFixed(2);
+                    document.getElementById('val-peak-p').innerText = (data.peak_p_mw / 1000.0).toFixed(2);
+                    document.getElementById('val-wh').innerText = data.energy_wh.toFixed(3);
+
+                    const r1 = document.getElementById('val-relay-status');
+                    r1.innerText = data.relay === 1 ? 'ACTIVE' : 'INACTIVE';
+                    r1.style.color = data.relay === 1 ? '#2e7d32' : '#c62828';
+                    document.getElementById('val-relay-time').innerText = data.uptime_relay;
+
+                    const r2 = document.getElementById('val-relay2-status');
+                    r2.innerText = data.relay2 === 1 ? 'ACTIVE' : 'INACTIVE';
+                    r2.style.color = data.relay2 === 1 ? '#2e7d32' : '#c62828';
+                    document.getElementById('val-relay2-time').innerText = data.uptime_relay2;
+
+                    if (!configLoaded) {
+                        document.getElementById('form-v-low').value = data.v_low_1;
+                        document.getElementById('form-v-high').value = data.v_high_1;
+                        document.getElementById('form-c-high').value = data.c_high_1;
+                        document.getElementById('form-v-low2').value = data.v_low_2;
+                        document.getElementById('form-v-high2').value = data.v_high_2;
+                        configLoaded = true;
+                    }
+
+                    if (data.logs) {
+                        const lb = document.getElementById('lb');
+                        lb.innerHTML = '';
+                        data.logs.forEach(log => {
+                            const d = document.createElement('div');
+                            d.innerText = log;
+                            lb.appendChild(d);
+                        });
+                    }
+                })
+                .catch(e => console.error(e));
+        }
+
+        document.getElementById('config-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new URLSearchParams(new FormData(this)).toString();
+            fetch(`${API_BASE}/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    showStatus('Tetapan berjaya disimpan!');
+                    configLoaded = false;
+                    updateData();
+                }
+            })
+            .catch(e => console.error(e));
+        });
+
+        setInterval(updateData, 2000);
+        updateData();
+    </script>
+</body>
+</html>
