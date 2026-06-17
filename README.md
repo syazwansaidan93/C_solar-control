@@ -1,85 +1,80 @@
-```markdown id="solar-relay-readme"
+---
+
 # 🔆 Solar Relay Control System (Orange Pi / Embedded C + Web UI)
 
-A lightweight **solar monitoring and relay control system** built for embedded Linux devices (e.g. Orange Pi).  
-It combines a **C-based backend server**, **INA226 power monitoring**, **GPIO relay control**, and a **modern HTML5 dashboard**.
+A lightweight solar monitoring and relay control system designed for embedded Linux devices such as Orange Pi.
+It combines a C-based backend server, INA226 power monitoring, GPIO relay control, and a simple web-based dashboard.
 
 ---
 
 ## 📌 Features
 
-- ⚡ Real-time voltage, current, power monitoring (INA226 via I2C)
-- 🔋 Battery percentage estimation
-- 📊 Peak tracking (voltage / current / power)
-- 🔁 Dual relay control (automatic + manual override)
-- 🌐 Built-in HTTP server (no external backend needed)
-- 📱 Responsive HTML5 dashboard UI
-- 📈 Energy tracking (Wh accumulation)
-- 🧠 Auto control logic based on thresholds
-- 🕒 Daily auto reset (6:30 AM)
-- 📝 Event logging (last 10 logs)
-- 🔧 Configurable thresholds via web UI
+* Real-time voltage, current, and power monitoring (INA226 via I2C)
+* Battery percentage estimation
+* Peak tracking (voltage, current, power)
+* Dual relay control (automatic + manual override)
+* Built-in lightweight HTTP server (no external backend required)
+* HTML5 web dashboard interface
+* Energy tracking (Wh accumulation)
+* Automatic control logic based on thresholds
+* Daily stats reset (6:30 AM)
+* Event logging (last 10 entries)
+* Web-based configuration panel
 
 ---
 
-## 🧠 System Architecture
+## 🧠 System Overview
 
-```
-
-[ INA226 Sensor ] → I2C → [ C Backend Server ] → JSON API → [ Web Dashboard ]
-↓
-GPIO Relays
-
-```
+INA226 sensor reads voltage/current/power →
+C backend processes data →
+GPIO controls relays →
+Web dashboard displays real-time status via JSON API
 
 ---
 
-## 🖥️ Web Dashboard
+## 🖥️ Web Interface
 
-Access via:
+Access the dashboard at:
 
 ```
+http://solar.lan
+```
 
-[http://solar.lan](http://solar.lan)
+### Dashboard includes:
 
-````
-
-### UI Features:
-- Live voltage / current / power display
-- Battery percentage bar
-- Relay ON/OFF status
-- Peak value tracking
-- Configuration panel (cutoff thresholds)
-- Event history log
+* Live voltage, current, power display
+* Battery percentage bar
+* Relay status (ON/OFF)
+* Peak value tracking
+* Configuration panel (threshold settings)
+* Event log history
 
 ---
 
 ## 🔌 Hardware Requirements
 
-- Orange Pi (or Linux SBC with GPIO + I2C)
-- INA226 current/voltage sensor
-- 2x Relay module (GPIO controlled)
-- Solar panel + battery system
-- Linux GPIO sysfs support
+* Orange Pi (or any Linux SBC with GPIO + I2C support)
+* INA226 current/voltage sensor
+* 2x relay module
+* Solar panel + battery system
 
 ---
 
 ## ⚙️ Software Requirements
 
-- GCC compiler
-- Linux I2C tools enabled (`/dev/i2c-*`)
-- Nginx (optional, for serving UI)
-- Root or GPIO permission access
+* GCC compiler
+* Linux I2C enabled (`/dev/i2c-*`)
+* Root access or GPIO permissions
 
 ---
 
-## 🛠️ Build Instructions
+## 🛠️ Build & Run
 
-Compile the backend:
+Compile:
 
 ```bash
 gcc solar.c -o solar -lm
-````
+```
 
 Run:
 
@@ -93,7 +88,7 @@ sudo ./solar
 
 ### GET `/api/data`
 
-Returns full system status:
+Returns full system status in JSON format:
 
 ```json
 {
@@ -123,24 +118,24 @@ Manually control relay:
 
 ### POST `/save`
 
-Save configuration:
+Save configuration values:
 
-* v_low / v_high thresholds
-* current cutoff values
-* relay behavior settings
+* Voltage low/high thresholds
+* Current cutoff values
+* Relay behavior settings
 
 ---
 
 ## ⚙️ Control Logic
 
-### Relay 1 (Charging Control)
+### Relay 1 (Battery/Charging Control)
 
-* ON if battery voltage ≤ low threshold
-* OFF if voltage ≥ high threshold AND current condition met
+* ON when voltage ≤ low threshold
+* OFF when voltage ≥ high threshold AND current condition satisfied
 
 ### Relay 2 (Load Control)
 
-* ON/OFF based on voltage window
+* Based on voltage range window (ON/OFF thresholds)
 
 ---
 
@@ -149,36 +144,36 @@ Save configuration:
 Battery percentage is estimated using:
 
 * Voltage thresholds
-* Load/charge current condition
+* Load/charging condition
 
 ---
 
 ## 🧾 Logging System
 
-Stores last 10 events such as:
+Stores last 10 system events:
 
 * Relay state changes
-* System resets
 * Configuration updates
+* System initialization
 * Sensor errors
 
 ---
 
 ## 🔐 GPIO Mapping
 
-| Relay   | GPIO Pin |
-| ------- | -------- |
-| Relay 1 | 70       |
-| Relay 2 | 69       |
+| Relay   | GPIO |
+| ------- | ---- |
+| Relay 1 | 70   |
+| Relay 2 | 69   |
 
 ---
 
-## ⏱️ Timing & Safety
+## ⏱️ System Behavior
 
+* Adaptive polling (1–2 seconds depending on load condition)
 * Debounce protection for relay switching
-* Adaptive polling interval (1–2s)
-* I2C error detection
-* Safe GPIO initialization
+* I2C error handling
+* Safe GPIO initialization on startup
 
 ---
 
@@ -194,24 +189,19 @@ Stored at:
 
 ## 🚀 Future Improvements
 
-* SQLite logging support
+* SQLite logging system
 * MQTT integration
-* Mobile app dashboard
-* Web authentication
+* Mobile-friendly UI upgrade
+* Authentication layer
 * Historical graphs (Chart.js)
-* Power forecasting
+* Power prediction module
 
 ---
 
 ## 📜 License
 
-MIT License — free to use and modify.
+MIT License
 
 ---
-
-## 👨‍💻 Author
-
-Built for embedded solar monitoring & automation systems.
-
-```
-```
+* buat **nginx config + reverse proxy secure**
+* atau upgrade jadi **full IoT dashboard (graf + history + database)**
