@@ -203,5 +203,3 @@ Stored at:
 MIT License
 
 ---
-* buat **nginx config + reverse proxy secure**
-* atau upgrade jadi **full IoT dashboard (graf + history + database)**
