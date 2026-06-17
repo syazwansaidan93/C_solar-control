@@ -416,7 +416,7 @@ int main(void) {
     address.sin_port = htons(WEB_PORT);
 
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        perror("Bind Port 8081 gagal");
+        perror("Bind Port 8081 failed");
         return 1;
     }
     listen(server_fd, 10);
